@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -11,20 +12,18 @@ import (
 	"github.com/urfave/cli"
 )
 
-const (
-	expireSeconds = 0 // no expired
-)
-
 var (
-	OSSVersion = "v0.0.1"
+	OSSVersion = "v0.0.2"
 	OSSDate    = time.Now()
 
 	flags = map[string]map[string]string{
-		"OSS_ENDPOINT":  {"ali oss endpoint.": "oss-cn-beijing.aliyuncs.com"},
-		"OSS_BUCKET":    {"ali oss bucket.": ""},
-		"OSS_KEY":       {"ali oss key.": ""},
-		"OSS_SECRET":    {"ali oss secret.": ""},
-		"OSS_FILE_PATH": {"file path which needs to be uploaded.": ""},
+		"OSS_ENDPOINT":       {"aliyun oss endpoint.": "oss-cn-beijing.aliyuncs.com"},
+		"OSS_BUCKET":         {"aliyun oss bucket.": ""},
+		"OSS_KEY":            {"aliyun oss key.": ""},
+		"OSS_SECRET":         {"aliyun oss secret.": ""},
+		"OSS_EXPIRE_SECONDS": {"aliyun oss public url expire seconds.": "0"},
+		"OSS_URL_PUBLIC":     {"after uploading, an accessible URL is generated.": "false"},
+		"FILE_PATH":          {"file path which needs to be uploaded.": ""},
 	}
 )
 
@@ -101,16 +100,21 @@ func action(c *cli.Context) error {
 		logrus.Fatalln(err)
 	}
 
-	filePath := os.Getenv("OSS_FILE_PATH")
+	filePath := os.Getenv("FILE_PATH")
 	fileIndex := strings.LastIndex(filePath, "/")
 	fileName := filePath[fileIndex+1:]
 
-	signedURL, err := bucket.SignURL(fileName, oss.HTTPPut, expireSeconds)
-	if err != nil {
-		logrus.Fatalln(err)
+	isPublic := os.Getenv("OSS_URL_PUBLIC")
+	if strings.EqualFold(isPublic, "true") {
+		expireSeconds, _ := strconv.ParseInt(os.Getenv("OSS_EXPIRE_SECONDS"), 10, 64)
+		signedURL, err := bucket.SignURL(fileName, oss.HTTPPut, expireSeconds)
+		if err != nil {
+			logrus.Fatalln(err)
+		}
+		err = bucket.PutObjectFromFileWithURL(signedURL, filePath)
+	} else {
+		err = bucket.PutObjectFromFile(fileName, filePath)
 	}
-
-	err = bucket.PutObjectFromFileWithURL(signedURL, filePath)
 	if err != nil {
 		logrus.Fatalln(err)
 	}

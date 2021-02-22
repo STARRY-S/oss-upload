@@ -1,6 +1,11 @@
 # oss-upload
 
-Used to upload object to ali-yun oss.
+Used to upload object to Aliyun oss.
+
+## Example
+```bash
+./oss-upload --oss_endpoint oss-cn-beijing.aliyuncs.com --oss_bucket demo --oss_key xxx --oss_secret xxx --file_path xxx
+```
 
 ## License
 Copyright (c) 2019-2019 [Jason-ZW](https://github.com/Jason-ZW).
