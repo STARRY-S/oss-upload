@@ -1,0 +1,30 @@
+FROM registry.suse.com/bci/golang:1.19
+
+ARG DAPPER_HOST_ARCH
+ENV HOST_ARCH=${DAPPER_HOST_ARCH} ARCH=${DAPPER_HOST_ARCH}
+
+RUN zypper -n install gcc binutils glibc-devel-static ca-certificates git-core wget curl unzip tar vim less file xz gzip sed gawk iproute2 iptables jq
+# use containerd from k3s image, not from bci
+RUN zypper install -y -f docker && rpm -e --nodeps --noscripts containerd
+
+RUN if [ "${ARCH}" == "amd64" ]; then \
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.49.0; \
+        curl -H 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/spectrometer/master/install.sh | sh; \
+    fi
+
+ENV YQ_URL=https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_${ARCH}
+RUN curl -sLf ${YQ_URL} -o /usr/bin/yq && chmod +x /usr/bin/yq
+
+RUN zypper install -y python3-tox python3-base python3 libffi-devel libopenssl-devel
+
+ENV DAPPER_ENV REPO=think-show TAG DRONE_TAG DRONE_COMMIT DRONE_BRANCH DRONE_BUILD_EVENT SYSTEM_CHART_DEFAULT_BRANCH GOGET_MODULE GOGET_VERSION RELEASE_ACTION RELEASE_TYPE DEBUG
+ENV DAPPER_SOURCE /go/src/github.com/Jason-ZW/oss-upload/
+ENV DAPPER_OUTPUT ./bin ./dist ./go.mod ./go.sum ./Dockerfile.dapper
+ENV DAPPER_DOCKER_SOCKET true
+ENV DAPPER_RUN_ARGS "-v rancher2-go16-pkg-1:/go/pkg -v rancher2-go16-cache-1:/root/.cache/go-build --privileged"
+ENV GOCACHE /root/.cache/go-build
+ENV HOME ${DAPPER_SOURCE}
+WORKDIR ${DAPPER_SOURCE}
+
+ENTRYPOINT ["./scripts/entry"]
+CMD ["ci"]
