@@ -54,6 +54,7 @@ func main() {
 	app.Version = OSSVersion
 	app.Flags = generateFlags()
 	app.Action = action
+	logrus.Info("Start running...")
 	if err := app.Run(os.Args); err != nil {
 		logrus.Fatalln(err)
 	}
